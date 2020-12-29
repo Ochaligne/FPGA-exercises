@@ -11,76 +11,57 @@ port (
 end FSM_Sequence_Detector;
 ---------------------------------------------------------------
 architecture behaviour of FSM_Sequence_Detector is
-type Sequence_Detector is (Zero, One, OneOne, OneOneZero, OneOneZeroOne); -- Sequence State Names
-signal current_state, next_state: Sequence_Detector; -- State Flags
+signal s0,s1,s2,s3,s4: std_logic:= '0';
 
 begin
 -- Sequential control of the Sequence Detector
 process(clk,rst)
     begin
      if(rst='1') then -- at reset zero the current state
-      current_state <= Zero;
+        s0<='1';
+        s1<='0';
+        s2<='0';
+        s3<='0';
+        s4<='0';
      elsif(rising_edge(clk)) then -- change state at turn of the clock
-      current_state <= next_state;
-     end if;
-end process;
----------------------------------------------------------------
--- Next state logic of the Sequence Detector
-process(current_state,Data_in)
-    begin
-        case(current_state) is
-         when Zero => -- previous bit sequence
-          if(Data_in='1') then -- required bit
-           -- "1"
-           next_state <= One;
+          if s0='1' and Data_in='1' then
+            s1 <= '1';
+            s0 <= '0';
           else
-           next_state <= Zero; -- restart sequence
+            s0<='1';
           end if;
-         when One => -- previous bit sequence
-          if(Data_in='1') then -- required bit
-           -- "11"
-           next_state <= OneOne;
+          if s1='1' and Data_in='1' then
+            s2 <= '1';
+            s1 <= '0';
           else
-           next_state <= Zero; -- restart sequence
-          end if;  
-         when OneOne => -- previous bit sequence
-          if(Data_in='0') then -- required bit
-           -- "110"
-           next_state <= OneOneZero;
-          else
-           next_state <= One; -- start sequence check again
-          end if;  
-         when OneOneZero => -- previous bit sequence
-          if(Data_in='1') then -- required bit
-           -- "1101"
-           next_state <= OneOneZeroOne;
-          else
-           next_state <= Zero; -- restart sequence
-          end if; 
-         when OneOneZeroOne => -- previous bit sequence
-          if(Data_in='1') then -- start sequence check again
-           next_state <= One;
-          else
-           next_state <= Zero; -- restart sequence
+          s0<='1';
           end if;
-        end case;
-end process;
+          if s2='1' and Data_in='0' then
+            s3 <= '1';
+            s2 <= '0';
+          else
+            s1<='1';
+          end if;
+          if s3='1' and Data_in='1' then
+            s4 <= '1';
+            s3 <= '0';
+          else
+            s0<='1';
+          end if;
+          if s4='1' and Data_in='1' then
+            s1 <='1';
+            s4 <= '0';
+          else
+            s0 <='1';
+           end if;
+        end if;
+    end process;
 ---------------------------------------------------------------
 -- Output logic of the Sequence Detector
-process(current_state)
-    begin 
-       case current_state is -- Detected is low until correct Sequence State Name
-         when Zero =>
-          Detected <= '0';
-         when One =>
-          Detected <= '0'; 
-         when OneOne => 
-          Detected <= '0'; 
-         when OneOneZero =>
-          Detected <= '0'; 
-         when OneOneZeroOne =>
-          Detected <= '1';
-       end case;
-    end process;
+Detected <= '1' when s4='1' else
+            '0' when s3='1' else
+            '0' when s2='1' else
+            '0' when s1='1' else
+            '0' when s0='1';
 end behaviour;
 ---------------------------------------------------------------
